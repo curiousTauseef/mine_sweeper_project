@@ -1,37 +1,56 @@
 /*********************************************************************************
-    Console-based version of Minesweeper 1.01
-    Copyright (C) <2012>  <Samuel Joseph>
 
-    Email: sjoseph11234@aim.com
-
+1403724, WON SEOB SEO
     To-do list:
     1. Create a function where user can select levels {easy, medium, hard}
 
     2. Create a better procedure for finding nearby mines,
         preferably, one less clunky and difficult to read and follow,
         and debug, and ... just about everything else.. something
-        simple, yet, efficient. Elegant..
+        simple, yet, efficient. Elegant.
 
+G E N E R A L 	 I N F O R M A T I O N
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+All	games are text based games,	no need for	any	graphics
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+(of course other than ASCII	graphics, so for example
+if you build minesweeper or	battleship game	it is not enough
+to have	it completely text based, at least some	printouts
+made with characters that represent	the	current	situation should be	used.)
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+No need	to build functionality to use mouse, so	player selecting
+square from	minesweeper game can be	asked to input the square
+by typing in for example ¡°A1¡± and press	enter.
+
+Project	must include: Design part (MS Visio	drawing	or something similar)
+and	the	source code	that is	well commented and clear to	read.
+
+Completed projects must be returned to tuubi!
+
+Projects must include the source code and design documentation!
+
+Deadline is	6th of May 2015.
+
+It is adamant	that the code is well indented, there are clear	comments and code is divided to	sections
+(such as if	you	are	using functions	they are grouped to	a clearly understandable way for example at	the	end	of
+the	source code	and	their location is clearly documented in	the	top	of the file).
+
+Minesweeper PROJECT	TASK
+
+Build a minesweeper	game (http://en.wikipedia.org/wiki/Minesweeper_%28video_game%29).
+At least 10	x 10 grid and possibility to mark found mines. Test the game to see how it works and do
+your best to implement the same functionality in your project.
+
 **********************************************************************************/
 
 /* Include files */
 #include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <time.h>
+#include <stdlib.h> // The stdlib .h header defines four variable types, several macros and various
+                    // functions for performing general functions.
+#include <ctype.h>  // The ctype.h header file of the C Standard Library provides
+                    // declares several functions useful for testing and mapping characters.
+#include <time.h> // The time.h header defines four variable types, two macro and various functions
+                  // for manipulating date and time.
 
 /* Definitions */
 #define BOARD_SIZE 6
@@ -39,29 +58,23 @@
 #define FALSE 1
 
 /* Global Variables */
-//-------------------------------------------------------------
-// I refuse to have to read in the gameboard for every
-// function that calls it..
-//
-// Global "lost" variable is kind of stupid, but, it works...
-//-------------------------------------------------------------
 char board[BOARD_SIZE][BOARD_SIZE];
 char game_board[BOARD_SIZE][BOARD_SIZE];
 int lost = 0;
 
 /* Function prototypes */
-void display_welcome();
-void build_board();
-void build_gboard();
-void create_mines();
+void star_message();
+void create_board();
+void create_gboard();
+void put_mines();
 void print_board();
 void print_fullboard();
-void start();
-int play_game();
-void play_again();
-int check_win_game();
-void check_for_mine(int, int);
-int check_for_nearby_mines(int, int);
+void begin();
+int play();
+void replay();
+int check_win();
+void check_mine(int, int);
+int check_near_mines(int, int);
 
 // Main function
 int main ()
@@ -71,16 +84,17 @@ int main ()
 
     // Get rid of welcome screen
     getchar();
-    system("cls");
+    system("cls"); // sending "cls" command to the operating system to clear the screen
+                    // Alternatively, clrscr();
 
-    start();
+    begin();
 
     return 0;
 
 }
 
 /* Build board used for created random mines */
-void build_board()
+void create_board()
 {
 
     int i, j;
@@ -92,10 +106,8 @@ void build_board()
         for(j = 0; j < BOARD_SIZE; j++)
             board[i][j] = 'o';
 
-    // Place mines in this board, it remains
-    // hidden from user until the game has
-    // finished.
-    create_mines();
+    // Put mines in this board
+    put_mines();
 }
 
 /* Build game board for user input */
@@ -104,7 +116,6 @@ void build_gboard()
 
     int i, j;
     int row, col, cur = 4;
-    printf("Creating game board....\nReady..set..\nPLAY!\n\n");
     //----------------------------------------
     // Assign char 'o' for all board elements
     //----------------------------------------
@@ -115,6 +126,7 @@ void build_gboard()
     //--------------------------------
     // Print board
     //--------------------------------
+    printf("  ")
     for(col = 0; col < BOARD_SIZE; col++)
         printf("%d ", col + 1);
 
@@ -122,29 +134,29 @@ void build_gboard()
 
     for(row = 0; row < BOARD_SIZE; row++)
     {
+        printf("%d \n", row + 1);
         for(col = 0; col < BOARD_SIZE; col++)
         {
             printf("%c ", game_board[row][col]);
         }
-        printf(" %d ", row + 1);
-        printf("\n");
     }
 }
 
-/* Create random places in the array for mines */
-void create_mines()
+/* Randomly create mines in the array*/
+void put_mines()
 {
     int i, random;
+    time_t t;
 
-    // Seeding srand() with time(0) so that
-    // mine locations aren't the same every
-    // time the game is played.
-    srand(time(0));
+    /* Intializes random number generator
+       so that mine locations aren't the same every*/
+    srand((unsigned) time(&t));
+
 
     for (i = 0; i < BOARD_SIZE; i++)
     {
-        random = rand() % (BOARD_SIZE);
-        board[random][i] = '*';
+        coordinate = rand() % (BOARD_SIZE);
+        board[coordinate][coordinate] = '*';
     }
 
 }
