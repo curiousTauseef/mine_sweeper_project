@@ -41,30 +41,24 @@ see how it works and do your best to implement the same functionality in your pr
                     // declares several functions useful for testing and mapping characters.
 #include <time.h> // The time.h header defines four variable types, two macro and various functions
                   // for manipulating date and time.
-#define MAX 50
 
-/* Global Variables */
-char hard_board[15][15];
-char hard_game_board[15][15];
-char norm_board[10][10];
-char norm_game_board[10][10];
-int lost = 0;
 
 /* Function prototypes */
 void initial_message();
 char set_difficulty();
-void star_message();
-void create_board(char difficulty);
-void create_gboard(char difficulty);
-void put_mines();
-void print_board();
-void print_fullboard();
 void begin(char difficulty);
-int play();
-void replay();
-int check_win();
-void check_mine(int, int);
-int check_near_mines(int, int);
+char* create_board(char difficulty);
+char** create_gboard(char difficulty);
+int set_size(char difficulty);
+char** put_mines(char difficulty, char** board);
+void print_fullboard(char difficulty, char** board);
+void print_board(char difficulty, char** game_board);
+void star_message();
+int play_game(char difficulty, char** gboard, char** board, int lost);
+void replay(char difficulty);
+int check_win(char difficulty, char** game_board, char** board);
+int check_mine(int x, int y, char** board);
+int counthowmanymines(int x, int y, char difficulty, char** board);
 
 // Main function
 int main ()
@@ -72,9 +66,8 @@ int main ()
     char difficulty;
     initial_message();
     difficulty = set_difficulty(); // set difficulty level
-
     // Get rid of welcome screen
-    clrscr(); // system("cls"), sending "cls" command to the operating system to clear the screen
+    system("cls"); // system("cls"), sending "cls" command to the operating system to clear the screen
                     // Alternatively, clrscr();
     begin(difficulty); // starts the game
     return 0;
@@ -84,10 +77,10 @@ int main ()
 // Displays the initial_message, game difficulty option
 void initial_message()
 {
-    printf("------------------------------------------------------------");
+    printf("------------------------------------------------------------\n");
     printf("Minesweeper game! \nAuthor:Won Seob Seo\nStudent number:1403724\n");
-    printf("Choose difficulty. 'n' for easy, 'h' for hard.")
-    printf("------------------------------------------------------------");
+    printf("Choose difficulty. 'n' for easy, 'h' for hard.\n");
+    printf("------------------------------------------------------------\n");
     puts("\n\n");
 }
 
@@ -97,71 +90,70 @@ char set_difficulty()
     char difficulty;
     do
     {
+        printf("Select difficulty level(h for hard, n for normal>");
         difficulty = getchar();
+        difficulty = tolower(difficulty);
+        // tolower(difficulty);
             if ((difficulty == 'h') || (difficulty == 'n'))
             {
                 return difficulty;
                 break;
             }
     } while (1);
-
 }
+
 /* function to begin the game */
-void begin(difficulty)
+void begin(char difficulty)
 {
-    lost = 0;    // User hasn't lost yet
+    int lost = 0;    // User hasn't lost yet
     // create both the boards for the user to see,
     // and the one with the mines).
-    create_board(difficulty);
-    create_gboard(difficulty);
+    char** board = create_board(difficulty);
+    char** game_board = create_gboard(difficulty);
 
     // Start playing game
     do
     {
-        play_game();
-        print_board();
+        play_game(difficulty, game_board, board, lost);
+        print_board(difficulty, game_board);
     } while(lost != 1);    // While the user hasn't lost, loop.
 
     // Once user is lost, print the board with all the mines.
-    print_fullboard();
+    print_fullboard(difficulty, board);
 
     // Play again?
-    play_again();
+    replay(difficulty);
 }
 
 
 /* Build board used for created random mines */
-void create_board(char difficulty)
+char** create_board(char difficulty)
 {
-    // set size according to the difficulty level
+    // set size according to the difficulty level and then create the board
     int size, i, j;
     size = set_size(difficulty);
+    char board[size][size];
+
     if (difficulty == 'h')
     {
-        size = 15;
+        for(i = 0; i < size; i++)
+            for(j = 0; j < size; j++)
+                board[i][j] = '@';
     }
-    else if (difficulty == 'n')
-    {
-        size = 10;
-    }
-
-    // Drawing board
-    for(i = 0; i < size; i++)
-        for(j = 0; j < size; j++)
-            board[i][j] = '@';
 
     // Put mines in this board
-    put_mines();
+    board = put_mines(difficulty, board);
+    return board;
 }
 
 /* Build game board for user input */
-void create_gboard()
+char ** create_gboard(char difficulty)
 {
     // set size according to the difficulty level
     int size, i, j;
     size = set_size(difficulty);
-    int i, j;
-    int row, col, cur = 4;
+    int x, y, cur = 4;
+    char game_board[size][size];
     //Draw board
     for(i = 0; i < size; i++)
         for(j = 0; j < size; j++)
@@ -170,23 +162,25 @@ void create_gboard()
     //--------------------------------
     // Print board
     //--------------------------------
-    printf("  ")
-    for(col = 0; col < size; col++)
-        printf("%d ", col + 1);
+    printf("  ");
+    for(x = 0; x < size; x++)
+        printf("%d ", x + 1);
 
     printf("\n\n");
 
-    for(row = 0; row < size; row++)
+    for(y = 0; y < size; y++)
     {
-        printf("%d \n", row + 1);
-        for(col = 0; col < size; col++)
+        printf("%d \n", y + 1);
+        for(x = 0; x < size; x++)
         {
-            printf("%c ", game_board[row][col]);
+            printf("%c ", game_board[y][x]);
         }
     }
+
+    return game_board;
 }
 
-int set_size(difficulty)
+int set_size(char difficulty)
 {
     int size;
     if (difficulty == 'h')
@@ -199,76 +193,80 @@ int set_size(difficulty)
     }
     return size;
 }
+
 /* Randomly create mines in the array*/
-void put_mines(difficulty)
+char ** put_mines(char difficulty, char ** board)
 {
-    int i, random;
+    int i, coordinate;
     time_t t;
 
     /* Intializes random number generator
        so that mine locations aren't the same every*/
     srand((unsigned) time(&t));
-    size = set_size(difficulty);
+    int size = set_size(difficulty);
 
     for (i = 0; i < size; i++)
     {
         coordinate = rand() % (size);
         board[i][coordinate] = '*';
     }
-
+    return board;
 }
 
-/* Print the game board */
-void print_board()
+void print_board(char difficulty, char** game_board)
 {
-    int row, col;
-
+    int x, y;
+    int size = set_size(difficulty);
     system("cls");
-    for(col = 0; col < BOARD_SIZE; col++)
-        printf("%d ", col + 1);
+    for(x = 0; x < size; x++)
+        printf("%d ", x + 1);
 
     printf("\n\n");
-        for(row = 0; row < BOARD_SIZE; row++)
+        for(y = 0; y < size; y++)
     {
-        for(col = 0; col < BOARD_SIZE; col++)
+        for(x = 0; x < size; x++)
         {
-            printf("%c ", game_board[row][col]);
+            printf("%c ", game_board[y][x]);
         }
-        printf(" %d ", row + 1);
+        printf(" %d ", y + 1);
         printf("\n");
     }
 }
 
 /* Print the full board showing mines */
-void print_fullboard()
+void print_fullboard(char difficulty, char** board)
 {
-    int row, col;
+    int y, x;
+    int size = set_size(difficulty);
 
     system("cls");
-    for(col = 0; col < BOARD_SIZE; col++)
-        printf("%d ", col + 1);
+    for(x = 0; x < size; x++)
+        printf("%d ", x + 1);
 
     printf("\n\n");
-        for(row = 0; row < BOARD_SIZE; row++)
+        for(y = 0; y < size; y++)
     {
-        for(col = 0; col < BOARD_SIZE; col++)
+        for(x = 0; x < size; x++)
         {
-            printf("%c ", board[row][col]);
+            printf("%c ", board[y][x]);
         }
-        printf(" %d ", row + 1);
+        printf(" %d ", y + 1);
         printf("\n");
     }
 }
 
 /* Take user input for playing of the game */
-int play_game()
+int play_game(char difficulty, char** game_board, char** board, int lost)
 {
-    int r_selection = 0, c_selection = 0,
+    int xpostion = 0, yposition = 0,
         nearbymines = 0, nearbymines2 = 0,
         nearbymines3 = 0, nearbymines4 = 0,
         nearbymines5 = 0, nearbymines6 = 0,
         nearbymines7 = 0, nearbymines8 = 0,
         i = 0;
+
+    int size = set_size(difficulty);
+
 
     //----------------------------------------------
     // Recieves data from the user, first the row
@@ -277,16 +275,16 @@ int play_game()
     // this one seemed easiest.
     //----------------------------------------------
     do {
-    printf("\nMake a selection (ie. row [ENTER] col): \n");
-    printf("Row--> ");
-    scanf("%d", &r_selection);
-    printf("Col--> ");
-    scanf("%d", &c_selection);
+    printf("\nMake a selection (ie. y [ENTER] x): \n");
+    printf("y--> ");
+    scanf("%d", &yposition);
+    printf("x--> ");
+    scanf("%d", &xpostion);
 
-    } while(r_selection < 1 || r_selection > BOARD_SIZE || c_selection < 1 || r_selection > BOARD_SIZE);
+    } while(yposition < 1 || yposition > size || xpostion < 1 || yposition > size);
     // ^ Checks for any invalid input statements from user.
 
-    check_for_mine(r_selection - 1, c_selection - 1);
+    check_mine(yposition - 1, xpostion - 1, board);
 
     if(lost == 1)
         return -1;
@@ -294,8 +292,8 @@ int play_game()
     // Checks for nearby mines at every direction from user
     // input location. Assigns that location the number
     // of mines found nearby, updating the board.
-    nearbymines = check_for_nearby_mines(r_selection - 1, c_selection - 1);
-    game_board[r_selection - 1][c_selection - 1] = (char)( ((int)'0') + nearbymines );
+    nearbymines = counthowmanymines(yposition - 1, xpostion - 1, difficulty, board);
+    game_board[yposition - 1][xpostion - 1] = (char)( ((int)'0') + nearbymines );
 
     //--------------------------------------------------
     // The following checks for mines nearby elements
@@ -315,117 +313,117 @@ int play_game()
     //---------------------------------------------------
     if(nearbymines == 0)
     {
-        if(c_selection != BOARD_SIZE)
+        if(xpostion != size)
         {
             i = 0;
-            while(nearbymines == 0 && (c_selection - 1 + i) < BOARD_SIZE)
+            while(nearbymines == 0 && (xpostion - 1 + i) < size)
             {
                 // This is checking elements to the right
-                nearbymines = check_for_nearby_mines(r_selection - 1, (c_selection - 1 + i));
+                nearbymines = counthowmanymines(yposition - 1, (xpostion - 1 + i), difficulty, board);
                 if(nearbymines != -1)
                 {
-                game_board[r_selection - 1][(c_selection - 1) + i] = (char) ( ((int)'0') + nearbymines );
+                game_board[yposition - 1][(xpostion - 1) + i] = (char) ( ((int)'0') + nearbymines );
                 i++;
                 }
             }
-                if(r_selection != 1)
+                if(yposition != 1)
                 {
                     i = 0;
-                    while(nearbymines5 == 0 && (c_selection - 1 + i) < BOARD_SIZE && (r_selection - 1 - i) > 0)
+                    while(nearbymines5 == 0 && (xpostion - 1 + i) < size && (yposition - 1 - i) > 0)
                     {
                         // This is checking elements to the diagonal-uright
-                        nearbymines5 = check_for_nearby_mines((r_selection - 1 - i), (c_selection - 1 + i));
+                        nearbymines5 = counthowmanymines((yposition - 1 - i), (xpostion - 1 + i), difficulty, board);
                         if(nearbymines5 != -1)
                         {
-                        game_board[(r_selection - 1) - i][(c_selection - 1) + i] = (char) ( ((int)'0') + nearbymines5);
+                        game_board[(yposition - 1) - i][(xpostion - 1) + i] = (char) ( ((int)'0') + nearbymines5);
                         i++;
                         }
                     }
                 }
-                if(r_selection != BOARD_SIZE)
+                if(yposition != size)
                 {
                     i = 0;
-                    while(nearbymines6 == 0 && (r_selection - 1 + i) < BOARD_SIZE && (c_selection - 1 + i) < BOARD_SIZE )
+                    while(nearbymines6 == 0 && (yposition - 1 + i) < size && (xpostion - 1 + i) < size )
                     {
                         // This is checking elements to the diagonal-dright
-                        nearbymines6 = check_for_nearby_mines((r_selection - 1 + i), (c_selection - 1 + i));
+                        nearbymines6 = counthowmanymines((yposition - 1 + i), (xpostion - 1 + i), difficulty, board);
                         if(nearbymines != -1)
                         {
-                        game_board[(r_selection - 1) + i][(c_selection - 1) + i] = (char) ( ((int)'0') + nearbymines6);
+                        game_board[(yposition - 1) + i][(xpostion - 1) + i] = (char) ( ((int)'0') + nearbymines6);
                         i++;
                         }
                     }
                 }
         }
 
-        if(r_selection != BOARD_SIZE)
+        if(yposition != size)
         {
             i = 0;
-            while(nearbymines2 == 0 && (r_selection - 1 + i) < BOARD_SIZE)
+            while(nearbymines2 == 0 && (yposition - 1 + i) < size)
             {
                 // This is checking elements heading down
-                nearbymines2 = check_for_nearby_mines((r_selection - 1 + i), c_selection - 1);
+                nearbymines2 = counthowmanymines((yposition - 1 + i), xpostion - 1, difficulty, board);
                 if(nearbymines2 != -1)
                 {
-                game_board[(r_selection - 1) + i][c_selection - 1] = (char) ( ((int)'0') + nearbymines2 );
+                game_board[(yposition - 1) + i][xpostion - 1] = (char) ( ((int)'0') + nearbymines2 );
                 i++;
                 }
             }
 
-            if(c_selection != BOARD_SIZE)
+            if(xpostion != size)
             {
                 i = 0;
-                while(nearbymines7 == 0 && (r_selection - 1 + i) < BOARD_SIZE && (c_selection - 1 - i) > 0)
+                while(nearbymines7 == 0 && (yposition - 1 + i) < size && (xpostion - 1 - i) > 0)
                 {
                     // This is checking elements to the diagonal-dleft
-                    nearbymines7 = check_for_nearby_mines((r_selection - 1 + i), (c_selection - 1 - i));
+                    nearbymines7 = counthowmanymines((yposition - 1 + i), (xpostion - 1 - i), difficulty, board);
                     if(nearbymines != -1)
                     {
-                    game_board[(r_selection - 1) + i][(c_selection - 1) - i] = (char) ( ((int)'0') + nearbymines7);
+                    game_board[(yposition - 1) + i][(xpostion - 1) - i] = (char) ( ((int)'0') + nearbymines7);
                     i++;
                     }
                 }
             }
         }
 
-        if(r_selection != 1)
+        if(yposition != 1)
         {
             i = 0;
-            while(nearbymines3 == 0 && (r_selection - i) > 0)
+            while(nearbymines3 == 0 && (yposition - i) > 0)
             {
                 // This is checking elements heading up
-                nearbymines3 = check_for_nearby_mines((r_selection - 1 - i), c_selection - 1);
+                nearbymines3 = counthowmanymines((yposition - 1 - i), xpostion - 1, difficulty, board);
                 if(nearbymines3 != -1)
                 {
-                game_board[(r_selection - 1) - i][c_selection - 1] = (char) ( ((int)'0') + nearbymines3 );
+                game_board[(yposition - 1) - i][xpostion - 1] = (char) ( ((int)'0') + nearbymines3 );
                 i++;
                 }
             }
-            if(c_selection != BOARD_SIZE)
+            if(xpostion != size)
             {
-                while(nearbymines8 == 0 && (c_selection - 1 - i) > 0 && (r_selection - 1 - i) > 0)
+                while(nearbymines8 == 0 && (xpostion - 1 - i) > 0 && (yposition - 1 - i) > 0)
                 {
                     // This is checking elements to the diagonal-uleft
-                    nearbymines8 = check_for_nearby_mines((r_selection - 1 - i), (c_selection - 1 - i));
+                    nearbymines8 = counthowmanymines((yposition - 1 - i), (xpostion - 1 - i), difficulty, board);
                     if(nearbymines8 != -1)
                     {
-                    game_board[(r_selection - 1) - i][(c_selection - 1) - i] = (char) ( ((int)'0') + nearbymines8);
+                    game_board[(yposition - 1) - i][(xpostion - 1) - i] = (char) ( ((int)'0') + nearbymines8);
                     i++;
                     }
                 }
             }
         }
 
-        if(c_selection != 1)
+        if(xpostion != 1)
         {
             i = 0;
-            while(nearbymines4 == 0 && (c_selection - i) > 0)
+            while(nearbymines4 == 0 && (xpostion - i) > 0)
             {
                 // This is checking elements to the left
-                nearbymines4 = check_for_nearby_mines(r_selection - 1, (c_selection - 1 - i));
+                nearbymines4 = counthowmanymines(yposition - 1, (xpostion - 1 - i), difficulty, board);
                 if(nearbymines4 != -1)
                 {
-                game_board[r_selection - 1][(c_selection - 1) - i] = (char) ( ((int)'0') + nearbymines4 );
+                game_board[yposition - 1][(xpostion - 1) - i] = (char) ( ((int)'0') + nearbymines4 );
                 i++;
                 }
             }
@@ -435,147 +433,150 @@ int play_game()
 
 
     // Handles a player winning.
-    if(check_win_game() == TRUE)
+    if(check_win(difficulty, board, game_board) == TRUE)
     {
         system("cls");
-        print_fullboard();
+        print_fullboard(difficulty, board);
         printf("\n\nYou've won the game!! Congrats!!\n\n");
-        play_again();
+        replay(difficulty);
     }
 
     return 0;
 }
 
 /* Check whether user input has selected a mine */
-void check_for_mine(int r_select, int c_select)
+int check_mine(int x, int y, char** board)
 {
-    if(board[r_select][c_select] == '*')
+    int lost = 0;
+    if(board[x][y] == '*')
     {
-        printf("\nYou've hit a mine! You lose!\n");
-        getchar(); getchar();
+        printf("\nBomb!!! You just hit a mine! You lose!\n");
+        getchar();
         lost = 1;
     }
+    return lost;
 }
 
-/* Another ridiculous function to find nearby mines.
- * I know, I know...it's messy, and needs a rewrite. */
-int check_for_nearby_mines(int r_select, int c_select)
-{
-    int nearby_mine_count = 0;
+// A function to find nearby mines.
 
-    if(board[r_select][c_select] == '*')
+int counthowmanymines(int x, int y, char difficulty, char** board)
+{
+    int size = set_size(difficulty);
+    int howmanymines = 0;
+
+    if(board[x][y] == '*')
     {
         return -1;
     }
-    // Check for mines below and to the right.
-    if(r_select < (BOARD_SIZE - 1) && c_select < (BOARD_SIZE - 1))
+
+    if(x < (size - 1) && y < (size - 1))
     {
-        // Check for mine below
-        if(board[r_select + 1][c_select] == '*')
-            nearby_mine_count++;
-        // Check for mine to the right.
-        if(board[r_select][c_select + 1] == '*')
-            nearby_mine_count++;
-        // Check for mine diagonal-dright.
-        if(board[r_select + 1][c_select + 1] == '*')
-            nearby_mine_count++;
+        // Is there a mine to the right?
+        if(board[x + 1][y] == '*')
+            howmanymines++;
+        // Is there a mine below?
+        if(board[x][y + 1] == '*')
+            howmanymines++;
+        // Is there a mine to the south-east?
+        if(board[x + 1][y + 1] == '*')
+            howmanymines++;
 
         // Check whether the columns to the left can be checked
-        if(c_select != 0)
+        if(x != 0)
         {
             // Check for mine diagonal-dleft
-            if(board[r_select + 1][c_select - 1] == '*')
-                nearby_mine_count++;
+            if(board[x + 1][y - 1] == '*')
+                howmanymines++;
             // Check for mine to the left
-            if(board[r_select][c_select - 1] == '*')
-                nearby_mine_count++;
+            if(board[x][y - 1] == '*')
+                howmanymines++;
         }
         // Check whether the rows above can be checked
-        if(r_select != 0)
+        if(y != 0)
         {
             // Check for mine above
-            if(board[r_select - 1][c_select] == '*')
-                nearby_mine_count++;
+            if(board[y - 1][x] == '*')
+                howmanymines++;
             // Check for mine diagonal-uright
-            if(board[r_select - 1][c_select + 1] == '*')
-                nearby_mine_count++;
+            if(board[y - 1][x + 1] == '*')
+                howmanymines++;
             // Check whether columns to the left can be checked
-            if(c_select != 0)
+            if(x != 0)
             {
                 // Check for mine diagonal-uleft
-                if(board[r_select - 1][c_select - 1] == '*')
-                    nearby_mine_count++;
+                if(board[y - 1][x - 1] == '*')
+                    howmanymines++;
             }
         }
     }
     // Check if selection is in last row
-    if(r_select == (BOARD_SIZE - 1) && c_select != (BOARD_SIZE - 1))
+    if(y == (size - 1) && x != (size - 1))
     {
         // Check for mine above
-            if(board[r_select - 1][c_select] == '*')
-                nearby_mine_count++;
+            if(board[y - 1][x] == '*')
+                howmanymines++;
         // Check for mine diagonal-uright
-            if(board[r_select - 1][c_select + 1] == '*')
-                nearby_mine_count++;
+            if(board[y - 1][x + 1] == '*')
+                howmanymines++;
     }
     // Check if selection is in last column
-    if(c_select == (BOARD_SIZE - 1) && r_select != (BOARD_SIZE - 1))
+    if(x == (size - 1) && y != (size - 1))
     {
         // Check for mine to the left
-            if(board[r_select][c_select - 1] == '*')
-                nearby_mine_count++;
+            if(board[y][x - 1] == '*')
+                howmanymines++;
         // Check for mine diagonal-dleft
-            if(board[r_select + 1][c_select - 1] == '*')
-                nearby_mine_count++;
+            if(board[y + 1][x - 1] == '*')
+                howmanymines++;
     }
     // Check whether selection is last in element
-    if(r_select == (BOARD_SIZE - 1) && c_select == (BOARD_SIZE - 1))
+    if(y == (size - 1) && x == (size - 1))
     {
         // Check for mine to the left
-            if(board[r_select][c_select - 1] == '*')
-                nearby_mine_count++;
+            if(board[y][x - 1] == '*')
+                howmanymines++;
         // Check for mine diagonal-dleft
-            if(board[r_select - 1][c_select - 1] == '*')
-                nearby_mine_count++;
+            if(board[y - 1][x - 1] == '*')
+                howmanymines++;
         // Check for mine above
-            if(board[r_select - 1][c_select] == '*')
-                nearby_mine_count++;
+            if(board[y - 1][x] == '*')
+                howmanymines++;
     }
 
-    return nearby_mine_count;
+    return howmanymines;
 }
 
 /* Check if user has won game */
-int check_win_game()
+int check_win(char difficulty, char** game_board, char** board)
 {
-    int row, col;
-
-    for(row = 0; row < BOARD_SIZE; row++)
-        for(col = 0; col < BOARD_SIZE; col++)
+    int y, x;
+    int size = set_size(difficulty);
+    for(y = 0; y < size; y++)
+        for(x = 0; x < size; x++)
         {
-            if(game_board[row][col] == 'o' && board[row][col] != '*')
+            if(game_board[y][x] == 'o' && board[y][x] != '*')
                 return FALSE;
         }
 
     return TRUE;
 }
 // Ask user if they wish to play again.
-void play_again()
+void replay(char difficulty)
 {
     char ans;
 
     printf("\n\nWould you like to play again? (y/n) --> ");
     scanf(" %c", &ans);
 
-    if(toupper(ans) == 'Y')
+    if((ans == 'Y') || (ans == 'y'))
     {
         system("cls");
-        start();
+        begin(difficulty);
     }
 
     else
     {
-        printf("\n\nThanks for playing! Bye.");
+        printf("\n\nSee you again. I hope you enjoyed.");
         (void) getchar();
         exit(EXIT_SUCCESS);
     }

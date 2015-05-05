@@ -1,0 +1,11 @@
+
+            Welcome to MINESWEEPER in C !!!
+					
+	Good luck in sweeping the mines, 
+	because otherwise I'll have to see you at your grave.
+	
+                                                The author name : Won Seob Seo
+                                                 Student Number : #######
+
+													 
+                Hit enter key to enter game
