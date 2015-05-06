@@ -35,19 +35,20 @@ struct board // Struct the hidden board, enabling the return of the board
     clock_t done; // store end time
 };
 
+// the functions appears after the main function. They appear in the order of prototypes.
 void start_game(struct board h_board, struct board p_board); // start or restart game from the beginning
 void welcome(); //Display the welcome message
 struct board set_difficulty(struct board some_board); // Set difficulty(normal or hard), size, test_run mode, mine_number(10 or 25)
 struct board draw_hboard(struct board h_board); // Draw board and plant mine. This board will not be seen to the player
 struct board plant_mines(struct board h_board); // plant as many as mine_num on the hboard (invoked in the 'draw_hboard' function
 struct board draw_pboard(struct board p_board); // Draw the board for players
+void print_board(struct board some_board); // print h_board or p_board when necessary
 struct board ask_u_action(struct board h_board, struct board p_board); // Ask user action, calls open_mine() or mark_mine() function.
 struct board open_mine(struct board h_board, struct board p_board); // When in open mine mode, tries opening a mine. While doing that, it calls 'check_mode_change()' function
 int check_mode_change(char u_input[]); // Check if the input is for mode change, also check if there's unwanted alphabets.
 struct board check_lost(int row, int col, struct board h_board, struct board p_board); // check if the player is lost
 struct board mark_mine(struct board h_board, struct board p_board);
 int check_correct_range(int num, struct board p_board); // check if the user provided number is out of range
-void print_board(struct board some_board); // print h_board or p_board when necessary
 char count_nearby_mines(int row, int col, struct board h_board);
 struct board check_nearby_regions(int row, int col, struct board h_board, struct board p_board); // check nearby regions automatically and update the player board, called in open_mine() function.
 struct board check_win(struct board p_board); // check if player won the game, counting numeric fields should test the winning condition.
@@ -198,7 +199,22 @@ struct board plant_mines(struct board h_board)
     return h_board;
 }
 
-void print_board(struct board some_board)
+struct board draw_pboard(struct board p_board) // Draw the board for players and print it
+{
+    int i, j;
+
+    // Some initialization of p_board
+    p_board.mode = 'o'; //'o' is for open mode 'm' is for mark mode, start with open mode
+    p_board.num_mark = 0; //'o' is for open mode 'm' is for mark mode, start with open mode
+
+    for(i = 0; i < p_board.size; i++)
+        for(j = 0; j < p_board.size; j++)
+            p_board.gboard[i][j] = '_';
+
+    return p_board;
+}
+
+void print_board(struct board some_board) // print h_board or p_board
 {
     int i, j;
     printf("\n\n    ");
@@ -217,21 +233,6 @@ void print_board(struct board some_board)
         printf("%3i", i);
     }
     printf("\n");
-}
-
-struct board draw_pboard(struct board p_board) // Draw the board for players and print it
-{
-    int i, j;
-
-    // Some initialization of p_board
-    p_board.mode = 'o'; //'o' is for open mode 'm' is for mark mode, start with open mode
-    p_board.num_mark = 0; //'o' is for open mode 'm' is for mark mode, start with open mode
-
-    for(i = 0; i < p_board.size; i++)
-        for(j = 0; j < p_board.size; j++)
-            p_board.gboard[i][j] = '_';
-
-    return p_board;
 }
 
 struct board ask_u_action(struct board h_board, struct board p_board)
@@ -389,16 +390,6 @@ struct board check_lost(int row, int col, struct board h_board, struct board p_b
     return p_board; // if you don't return anything here, bad things bappen.
 }
 
-int check_correct_range(int num, struct board p_board) // check if the user provided number is out of range
-{
-    if ((num < 0) || (num > (p_board.size-1))) {
-        printf("\nWrong input! Enter from 0 to %i only!\n", p_board.size-1);
-        return 0; // Return 0. Because the player gave a wrong range.
-    } else {
-        return 1;
-    }
-}
-
 struct board mark_mine(struct board h_board, struct board p_board)
 {
     int i, j, row, col, ifvalid;
@@ -454,6 +445,16 @@ struct board mark_mine(struct board h_board, struct board p_board)
         p_board = check_win(p_board); // check if user actually won
     }
     return p_board;
+}
+
+int check_correct_range(int num, struct board p_board) // check if the user provided number is out of range
+{
+    if ((num < 0) || (num > (p_board.size-1))) {
+        printf("\nWrong input! Enter from 0 to %i only!\n", p_board.size-1);
+        return 0; // Return 0. Because the player gave a wrong range.
+    } else {
+        return 1;
+    }
 }
 
 char count_nearby_mines(int row, int col, struct board h_board)
