@@ -1,0 +1,25 @@
+
+            Welcome to MINESWEEPER in C !!!
+					
+	Good luck in sweeping the mines, 
+	because otherwise I'll have to see you at your grave.
+
+                            Author WON SEOB SEO
+
+Mine sweeper source code in C.
+Including features...
+0. Playtime display
+1. Mine 'markmode'. When you mark as many as mines, the rest is automatically opens for you.
+2. 'testrun' mode, make hidden board visible. Enables you to quickly test functions and see how this game work.
+3. Difficulty selection(hard : 15X15, 25 mines, normal : 10X10, 10 mines)
+4. When you opened a field with number '0', automatically opens its north, south, west, east field as well
+5. No global variables. Only constant is "MAX", but easily replaceable.
+   But actually used struct board as almost like a global variable because it is invoked from almost every function.
+6. When you win or lose, it will politely(?) ask if you want to play it again.
+7. When you win, the ending shows your progress. When you lose, the ending shows your progress,
+   where you were hit(by 'X'), how it looks like when you win, and the original hidden board.
+8. It took so much time to make it, but I really enjoyed making it and learned a lot from it.
+9. Now, please enjoy the game! Play!
+
+													 
+                Hit enter key to enter game
