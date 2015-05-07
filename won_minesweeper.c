@@ -3,7 +3,9 @@
                             Author WON SEOB SEO
 
 Mine sweeper source code in C.
+
 Including features...
+
 0. Playtime display
 1. Mine 'markmode'. When you mark as many as mines, the rest is automatically opens for you.
 2. 'testrun' mode, make hidden board visible. Enables you to quickly test functions and see how this game work.
@@ -13,10 +15,11 @@ Including features...
    But actually used struct board as almost like a global variable because it is invoked from almost every function.
 6. When you win or lose, it will politely(?) ask if you want to play it again.
 7. When you win, the ending shows your progress. When you lose, the ending shows your progress,
-   where you were hit(by 'X'), how it looks like when you win, and the original hidden board.
-8. It took so much time to make it, but I really enjoyed making it and learned a lot from it.
+   where you were hit(by 'X'), how it will look like if you won, and the original hidden board.
+8. After winning, you can record your name, playtime, and difficulty.
 9. Now, please enjoy the game! Play!
 
+P.S. It took so much time to make it, but I really enjoyed making it and learned a lot from it.
 **********************************************************************************/
 
 #include <stdio.h>
@@ -36,7 +39,7 @@ struct board // Struct the hidden board, enabling the return of the board
 };
 
 // the functions appears after the main function. They appear in the order of prototypes.
-void start_game(struct board h_board, struct board p_board); // start or restart game from the beginning
+char start_game(struct board h_board, struct board p_board, char replay); // start or restart game from the beginning
 void welcome(); //Display the welcome message
 struct board set_difficulty(struct board some_board); // Set difficulty(normal or hard), size, test_run mode, mine_number(10 or 25)
 struct board draw_hboard(struct board h_board); // Draw board and plant mine. This board will not be seen to the player
@@ -53,20 +56,21 @@ char count_nearby_mines(int row, int col, struct board h_board);
 struct board check_nearby_regions(int row, int col, struct board h_board, struct board p_board); // check nearby regions automatically and update the player board, called in open_mine() function.
 struct board check_win(struct board p_board); // check if player won the game, counting numeric fields should test the winning condition.
 char rechallenge(struct board p_board); // Let's be polite. Lets care about if player wants to challenge again. returns 'y' or 'n'
-void dump_line(FILE * fp);
+void record(int playtime, char difficulty); // when you win, record the playtime and player name and difficulty
+void dump_line(FILE * fp); // flush standard input
 
 int main()
 {
     int i, j;
+    char replay = ' '; //initialize replay stat, it contains answer of the player, wanna replay or not
     struct board h_board, p_board; // Declare board, its gonna be never bigger than MAX.
     // h_board is hidden from user, p_board is what the players see
-    start_game(h_board, p_board);
+    replay = start_game(h_board, p_board, replay);
     return 0;
 }
 
-void start_game(struct board h_board, struct board p_board) // start or restart game from the beginning
+char start_game(struct board h_board, struct board p_board, char replay) // start or restart game from the beginning
 {
-    char replay; // contains answer of the player, wanna replay or not
     welcome(); //Display the welcome message
     h_board = p_board = set_difficulty(p_board); // Set difficulty(normal or hard), size, test_run mode, mine_number(10 or 25)
     h_board = draw_hboard(h_board); // Draw board and plant mine. This board will not be seen to the player
@@ -80,18 +84,24 @@ void start_game(struct board h_board, struct board p_board) // start or restart 
     {
         p_board = ask_u_action(h_board, p_board);
         if ( p_board.mode == 'l') { // if mode is l, it means player lost. check if the player is lost.
+            if (replay == 'n') // when game played several times, check player already answered no
+                return replay;
             replay = rechallenge(p_board);
             if (replay == 'n'){ // Let's be polite. Lets care about if player wants to challenge again.
-                break;
+                return replay;
             } else if (replay == 'y') {
-                start_game(h_board, p_board); // when the player wants to play it again, it calls 'start_game()' function recursively
+                replay = start_game(h_board, p_board, replay); // when the player wants to play it again, it calls 'start_game()' function recursively
+                return replay;
             }
         } else if ( p_board.mode == 'w') { // if mode is w, it means player won. check if the player won.
+            if (replay == 'n') // when game played several times, check player already answered no
+            return replay;
             replay = rechallenge(p_board);
             if (replay == 'n'){ // Let's be polite. Lets care about if player wants to challenge again.
-                break;
+                return replay;
             } else if (replay == 'y') {
-                start_game(h_board, p_board); // when the player wants to play it again, it calls 'start_game()' function recursively
+                replay = start_game(h_board, p_board, replay); // when the player wants to play it again, it calls 'start_game()' function recursively
+                return replay;
             }
         }
     } while (1);
@@ -504,28 +514,32 @@ char count_nearby_mines(int row, int col, struct board h_board)
 
 struct board check_nearby_regions(int row, int col, struct board h_board, struct board p_board) // check nearby regions automatically and update the player board, called in open_mine() function.
 {
-    // check north
+    // check north west, north, north east regions
     if ((row - 1) >= 0) { // make sure you don't access to outside board
+        if ((col - 1) >= 0) { // make sure you don't access to outside board
+            p_board.gboard[row - 1][col - 1] = count_nearby_mines(row - 1, col - 1, h_board); // check north west
+        }
         p_board.gboard[row - 1][col] = count_nearby_mines(row - 1, col, h_board); // check north
-        // if ((count_nearby_mines(row - 1, col, h_board)) == '0') // check there s no mine at all again
-        //     p_board = check_nearby_regions(row - 1, col, h_board, p_board); // If no mine, call check_nearby_regions recursively. this should loop until it finds some mines nearby
+        if ((col + 1) <= (h_board.size - 1)) { // make sure you don't access to outside board
+            p_board.gboard[row - 1][col + 1] = count_nearby_mines(row - 1, col + 1, h_board); // check north east
+        }
     }
-    // check south
+    // check south west, south, south east regions
     if ((row + 1) <= (h_board.size - 1)) { // make sure you don't access to outside board
+        if ((col - 1) >= 0) { // make sure you don't access to outside board
+            p_board.gboard[row + 1][col - 1] = count_nearby_mines(row + 1, col - 1, h_board); // check south west
+        }
         p_board.gboard[row + 1][col] = count_nearby_mines(row + 1, col, h_board); // check south
-        // if ((count_nearby_mines(row + 1, col, h_board)) == '0') // check there s no mine at all again
-        //     p_board = check_nearby_regions(row + 1, col, h_board, p_board); // If no mine, call check_nearby_regions recursively. this should loop until it finds some mines nearby
+        if ((col + 1) <= (h_board.size - 1)) { // make sure you don't access to outside board
+            p_board.gboard[row + 1][col + 1] = count_nearby_mines(row + 1, col + 1, h_board); // check south east
+        }
     }
     // check due west, due east mines
     if ((col - 1) >= 0) { // make sure you don't access to outside board
         p_board.gboard[row][col - 1] = count_nearby_mines(row, col - 1, h_board); // check due west
-        // if ((count_nearby_mines(row, col - 1, h_board)) == '0') // check there s no mine at all again
-        //     p_board = check_nearby_regions(row, col - 1, h_board, p_board); // If no mine, call check_nearby_regions recursively. this should loop until it finds some mines nearby
     }
     if ((col + 1) <= (h_board.size - 1)) { // make sure you don't access to outside board
         p_board.gboard[row][col + 1] = count_nearby_mines(row, col + 1, h_board); // check due east
-        // if ((count_nearby_mines(row, col + 1, h_board)) == '0') // check there s no mine at all again
-        //     p_board = check_nearby_regions(row, col + 1, h_board, p_board); // If no mine, call check_nearby_regions recursively. this should loop until it finds some mines nearby
     }
     return p_board;
 }
@@ -553,12 +567,12 @@ struct board check_win(struct board p_board) // check if player won the game, co
 
 char rechallenge(struct board p_board)
 {
-    char whatnow;
+    char whatnow, difficulty;
     if (p_board.mode == 'l') {
+        dump_line(stdin);
         printf("Well... What now? Do you wanna challenge again?\n"
                "Choose y for a re-challenge or n for quit like a loser.(y/n): ");
         do {
-            dump_line(stdin);
             scanf("%c", &whatnow);
             if (whatnow == 'n') {
                 printf("Ok, whatever. Bye-bye quitter.\n");
@@ -583,10 +597,12 @@ char rechallenge(struct board p_board)
             p_board.done = clock(); // store the ending time
             int playtime = (p_board.done - p_board.launch) / CLOCKS_PER_SEC; // convert the time into the seconds
             printf("The total playtime is : %i seconds.\n", playtime); // show the playtime
+            difficulty = 'n';
             print_board(p_board);
+            record(playtime, difficulty);
+            // dump_line(stdin);
             printf("\nDo you want to play again? Maybe you could challenge the hard level.(y/n): ");
             do {
-                dump_line(stdin);
                 scanf("%c", &whatnow);
                 if (whatnow == 'n') {
                     printf("Ok. See you again!\n");
@@ -611,9 +627,11 @@ char rechallenge(struct board p_board)
             int playtime = (p_board.done - p_board.launch) / CLOCKS_PER_SEC; // convert the time into the seconds
             printf("The total playtime is : %i seconds.\n", playtime); // show the playtime
             print_board(p_board);
+            difficulty = 'h';
+            record(playtime, difficulty);
+            // dump_line(stdin);
             printf("\nDo you want to play again? (y/n): ");
             do {
-                dump_line(stdin);
                 scanf("%c", &whatnow);
                 if (whatnow == 'n') {
                     printf("Farewell my friend. If you ever wanna show off your intelligence, you are always welcome!\n");
@@ -635,7 +653,38 @@ char rechallenge(struct board p_board)
     }
 }
 
-void dump_line(FILE * fp)
+void record(int playtime, char difficulty) // when you win, record the playtime and player name
+{
+    char answer, name[30];
+
+    do {
+        printf("Your record is %i seconds.\nDo you want to record play time and your name (y/n)? ", playtime);
+        dump_line(stdin);
+        answer = getchar();
+    } while (answer != 'y' && answer != 'n');
+    if ( answer == 'y' ) {
+        FILE* fp;
+        fp = fopen("Records.txt", "a");
+        if (fp == NULL) {
+          perror("Error in writing the record!\n");
+          return;
+        }
+        printf("Enter your name: ");
+        dump_line(stdin);
+        fgets(name, 30, stdin);
+        name[strlen(name)-1] = '\0';// slice the last letter, which is '\n' new line character
+        if (difficulty == 'n') {
+            fprintf(fp, "Name: %s // Record: %i seconds // Difficulty: Normal\n", name, playtime);
+        } else if (difficulty == 'h') {
+            fprintf(fp, "Name: %s // Record: %i seconds // Difficulty: Hard\n", name, playtime);
+        }
+        printf("Done with the recording!\n");
+        fclose(fp);
+        getchar(); // Waiting for a user input
+    }
+}
+
+void dump_line(FILE * fp) // flush the standard input
 {
     int ch;
     while ((ch = fgetc(fp)) != EOF && ch != '\n') {
